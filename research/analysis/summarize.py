@@ -152,7 +152,7 @@ def main():
                                      "overhead_pct": 100 * (row[f"{variant}_median_ms"] / reference[f"{variant}_median_ms"] - 1)})
     assert rows, "no complete successful pairs"
     with (args.directory / "summary.csv").open("w", newline="") as file:
-        writer = csv.DictWriter(file, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(file, fieldnames=list(rows[0]), lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
     (args.directory / "summary.md").write_text(render(manifest, rows, failed, overhead))

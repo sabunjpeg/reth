@@ -1,0 +1,14 @@
+[
+  {
+    "fixture": "oracle-reads-64-seed-42",
+    "workers": 4,
+    "variant": "A",
+    "overhead_pct": -2.0689712548253136
+  },
+  {
+    "fixture": "oracle-reads-64-seed-42",
+    "workers": 4,
+    "variant": "B",
+    "overhead_pct": -2.684973863445528
+  }
+]

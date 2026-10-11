@@ -1,0 +1,2 @@
+fixture,B_workers,pairs,median_paired_speedup,speedup_ci_low,speedup_ci_high,A_median_ms,A_q1_ms,A_q3_ms,A_cpu_ms,A_logical_reads,A_storage_reads,A_process_peak_rss_mib,A_local_tx_per_s,B_median_ms,B_q1_ms,B_q3_ms,B_cpu_ms,B_logical_reads,B_storage_reads,B_process_peak_rss_mib,B_local_tx_per_s
+oracle-reads-64-seed-42,4,30,0.9705763952820406,0.9376240509726749,0.986598380817302,1.141896,1.118625,1.157833,1.147,,,19.625,56047.14238155288,1.1701045,1.142459,1.231042,1.415,,,21.15625,54696.077631517364

@@ -1,0 +1,71 @@
+{
+  "binary_keccak256": "0xe1e47db09e881d621d6e241921355936181539237fba35d09ab6dc391a35f448",
+  "build_profile": "release (use documented --release build)",
+  "cache": "fresh independently reconstructed parent state per replay; OS cache uncontrolled",
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "config": {
+    "collect_counters": true,
+    "fixtures": [
+      "research/fixtures/transfers-16.json",
+      "research/fixtures/oracle-reads-16.json",
+      "research/fixtures/transfers-64.json",
+      "research/fixtures/oracle-reads-64.json"
+    ],
+    "order_seed": 20261012,
+    "repetitions": 30,
+    "schema_version": 1,
+    "timeout_seconds": 30,
+    "warmups": 5,
+    "workers": [
+      1,
+      2,
+      4
+    ]
+  },
+  "cpu": "RUSAGE_SELF user/system deltas across timed execution, all threads",
+  "dirty_diff_keccak256": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+  "environment": "local development pilot; background load, CPU affinity, thermal and power conditions uncontrolled",
+  "fixtures": [
+    {
+      "keccak256": "0x580f6f17a2a7550b8bc6eab6d4bdbc93e69e079eabc007a39134e6699fd133b0",
+      "path": "research/fixtures/transfers-16.json"
+    },
+    {
+      "keccak256": "0x7ae5f6984bd8536ff9821b8c6d1e8d711bb4063dbaccae90370de9cd1ba8e23a",
+      "path": "research/fixtures/oracle-reads-16.json"
+    },
+    {
+      "keccak256": "0x1ceadd65ce49903940e402a48e20594e783f88db3168a96b1a61b0979dedb3ac",
+      "path": "research/fixtures/transfers-64.json"
+    },
+    {
+      "keccak256": "0xc42cdf787d4974ff27bbea05b36ff90c2969f4793f875679c004be4252fcdb4c",
+      "path": "research/fixtures/oracle-reads-64.json"
+    }
+  ],
+  "fork": "ChainSpecBuilder::mainnet().amsterdam_activated()",
+  "git_status": "",
+  "hardware": "Apple M4 Pro",
+  "host_id": "Hugos-MacBook-Pro.local",
+  "lockfile_keccak256": "0x0021f89ea670d3d7fbaca164a4f237b31f40b16d34ecdf43208fc5dfd74af5f5",
+  "logical_reads": "CountedDb account/code/storage/block-hash calls; not EVM opcode counts or physical I/O",
+  "measurement_level": "L1",
+  "os": "Darwin 25.6.0 arm64",
+  "peak_rss": "RUSAGE_SELF process-lifetime high-water mark through measurement; includes setup and same-variant warmups; bytes on macOS, KiB converted to bytes on Linux",
+  "ram_bytes": "25769803776",
+  "research_sha": "d19763ef1f5aaac9a6dffce6d3fd684370821420",
+  "run_id": "1791744055757896000-32356",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "rustflags": "",
+  "sample_process_isolation": true,
+  "schema_version": 1,
+  "scope": "execution component only; no payload acceptance, storage prewarm or state-root tasks; not a full A/B optimization-bundle result",
+  "stock_execution_code_unchanged": true,
+  "timer": "per-block execution setup through joined execution helper; excludes parent snapshot construction, reference generation, file loading, process startup, runtime and chain-configuration initialization, warmups and output comparison; includes BAL worker database clones",
+  "unsupported_counters": {
+    "cache_hits": "BAL and REVM caches not separately instrumented",
+    "cache_misses": "BAL and REVM caches not separately instrumented",
+    "physical_read_bytes": "in-memory execution"
+  },
+  "upstream_sha": "1a4dbbe11264fd52e6e9fbe768aa83f9a6b73607"
+}
