@@ -73,8 +73,12 @@ def summarize(grouped):
             low,high=bootstrap_median_ci(ratios)
             row=dict(comparison=comparison,fixture=fixture,baseline=baseline,target=target,pairs=len(pairs),median_paired_speedup=statistics.median(ratios),speedup_ci_low=low,speedup_ci_high=high)
             for label, samples in [("baseline",left),("target",right)]:
-                for field,scale in [("wall_ns",1e6),("t_detect_ns",1e6),("validation_return_ns",1e6),("peak_rss_bytes",2**20),("logical_reads",1),("phantom_lookups_completed",1),("phantom_lookups_skipped",1),("index_decode_verify_ns",1e6),("index_bytes",1)]:
-                    row[f"{label}_{field}"]=median_field(samples,field,scale)
+                for field,column,scale in [("wall_ns","wall_ms",1e6),("t_detect_ns","detect_ms",1e6),("validation_return_ns","validation_return_ms",1e6),("peak_rss_bytes","peak_rss_mib",2**20),("logical_reads","logical_reads",1),("phantom_lookups_completed","phantom_lookups_completed",1),("phantom_lookups_skipped","phantom_lookups_skipped",1),("index_decode_verify_ns","index_decode_verify_ms",1e6),("index_bytes","index_bytes",1)]:
+                    row[f"{label}_{column}"]=median_field(samples,field,scale)
+                for field in ("phantom_lookups_completed","phantom_lookups_skipped"):
+                    values=[r[field] for r in samples if r[field] is not None]
+                    row[f"{label}_{field}_min"]=min(values) if values else None
+                    row[f"{label}_{field}_max"]=max(values) if values else None
                 row[f"{label}_cpu_ms"]=statistics.median((r["cpu_user_ns"]+r["cpu_system_ns"])/1e6 for r in samples)
                 row[f"{label}_cleanup_ms"]=None if samples[0]["t_detect_ns"] is None else statistics.median((r["t_stop_ns"]-r["t_detect_ns"])/1e6 for r in samples)
             rows.append(row)
@@ -83,16 +87,17 @@ def summarize(grouped):
 def render(manifest,rows,count):
     lines=["# Local full-validator A/B and B/C pilot","",f"Producing revision: `{manifest['research_sha']}`; upstream: `{manifest['upstream_sha']}`.","",f"{count} isolated measurements; {manifest['config']['warmups']} warmups per child and {manifest['config']['repetitions']} randomized paired repetitions per cell. No failed, timed-out or unexpected-verdict samples. Every accepted output matches a serial MDBX reference digest (state, contracts, receipts, gas, requests and BAL); the full engine also validates state and receipt roots.","","A disables BAL execution/root/batch-I/O switches. B retains the pinned stock guards, execution, prewarm ordering and root pipeline. C verifies experimental first-read metadata at canonical completion and cancels pending BAL prefetch between operations; CAttr verifies identically but uses stock prefetch cleanup. BStock disables research observers and execution-provider counters in the same research build; it is not a separate unmodified binary.","","| Comparison | Fixture | Baseline ms | Candidate ms | Paired speedup (95% CI) | Baseline CPU ms | Candidate CPU ms |","| --- | --- | ---: | ---: | --- | ---: | ---: | ---: |"]
     for r in rows:
-        lines.append(f"| {r['baseline']}/{r['target']} | {r['fixture']} | {r['baseline_wall_ns']:.3f} | {r['target_wall_ns']:.3f} | {r['median_paired_speedup']:.2f}x ({r['speedup_ci_low']:.2f}–{r['speedup_ci_high']:.2f}) | {r['baseline_cpu_ms']:.3f} | {r['target_cpu_ms']:.3f} |")
+        lines.append(f"| {r['baseline']}/{r['target']} | {r['fixture']} | {r['baseline_wall_ms']:.3f} | {r['target_wall_ms']:.3f} | {r['median_paired_speedup']:.2f}x ({r['speedup_ci_low']:.2f}–{r['speedup_ci_high']:.2f}) | {r['baseline_cpu_ms']:.3f} | {r['target_cpu_ms']:.3f} |")
     lines += ["","A ratio above one means the candidate releases measured tasks sooner. The interval bootstraps paired ratios (2,000 resamples, seed 42); it does not control host drift, thermals or background load.","","| Phantom fixture | Variant | Detection ms | Cleanup after detection ms | Completed phantom lookups | Skipped phantom lookups | Index verification ms |","| --- | --- | ---: | ---: | ---: | ---: | ---: |"]
     seen=set()
     for r in rows:
-        if r['baseline_t_detect_ns'] is None:continue
+        if r['baseline_detect_ms'] is None:continue
         for label,variant in [("baseline",r['baseline']),("target",r['target'])]:
             if (r['fixture'],variant) in seen:continue
             seen.add((r['fixture'],variant))
-            decode=r[f'{label}_index_decode_verify_ns']
-            lines.append(f"| {r['fixture']} | {variant} | {r[f'{label}_t_detect_ns']:.3f} | {r[f'{label}_cleanup_ms']:.3f} | {r[f'{label}_phantom_lookups_completed']:g} | {r[f'{label}_phantom_lookups_skipped']:g} | {decode:.3f} |" if decode is not None else f"| {r['fixture']} | {variant} | {r[f'{label}_t_detect_ns']:.3f} | {r[f'{label}_cleanup_ms']:.3f} | {r[f'{label}_phantom_lookups_completed']:g} | {r[f'{label}_phantom_lookups_skipped']:g} | — |")
+            decode=r[f'{label}_index_decode_verify_ms']
+            lines.append(f"| {r['fixture']} | {variant} | {r[f'{label}_detect_ms']:.3f} | {r[f'{label}_cleanup_ms']:.3f} | {r[f'{label}_phantom_lookups_completed']:g} | {r[f'{label}_phantom_lookups_skipped']:g} | {decode:.3f} |" if decode is not None else f"| {r['fixture']} | {variant} | {r[f'{label}_detect_ms']:.3f} | {r[f'{label}_cleanup_ms']:.3f} | {r[f'{label}_phantom_lookups_completed']:g} | {r[f'{label}_phantom_lookups_skipped']:g} | — |")
+    lines += ["","Lookup counts above are medians. Cancellation depends on scheduling; the CSV also reports minimum/maximum completed and skipped lookups. Earlier canonical rejection need not mean an earlier wall-clock error: sidecar processing adds time. Compare detection, completion and CPU separately."]
     lines += ["","Stock B rejects correctly committed phantom reads with `BlockAccessListHashMismatch` after index 65. C rejects at the declared first-access index (1, 32 or 65). Counts are provider requests; completed includes requests returning absent values. They do not measure physical disk bytes. Execution logical-read counts exclude prewarm/proof providers and vary with cache races. Peak RSS is the entire process high-water mark including setup/warmups. Physical I/O, cache hit/miss rates and cold-state behavior are unmeasured.","","The parent is a small synthetic MDBX database on a local Mac. Sidecar verification and named-task/pool drain are inside timing. Database setup, payload construction, fresh execution-cache/overlay setup, producer trace generation and output-oracle checks are outside timing. Named queues are drained through FIFO barriers; existing execution guards join workers, BAL prewarm joins its 128 workers, proof/overlay pools are cleared. Active database reads finish. There is no cancellation of an already executing EVM instruction stream.","","Phantom sizes use 10% and 50% of the remaining pinned `gas_limit / ITEM_COST` item allowance. Standard BAL and block commitments are recomputed, leaving transaction/state commitments truthful. Larger metadata and late claims can erase or reverse early-rejection gains. Producer trace and encoding times appear separately in the manifest; these prototype trace timings include an independent serial execution and do not estimate an integrated block-builder overhead."]
     return "\n".join(lines)+"\n"
 

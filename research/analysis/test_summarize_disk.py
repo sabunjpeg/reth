@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from run_disk import failed_record
-from summarize_disk import load
+from summarize_disk import load, summarize
 
 
 class DiskLedgerTests(unittest.TestCase):
@@ -80,6 +80,24 @@ class DiskLedgerTests(unittest.TestCase):
         self.assertEqual(record["stderr"], "timeout")
         self.assertIsNone(record["t_stop_ns"])
         self.assertIsNone(record["physical_read_bytes"])
+
+    def test_summary_units_and_cancellation_range(self):
+        samples=[]
+        for completed in (0,7):
+            sample=dict(wall_ns=2_000_000,t_stop_ns=2_000_000,t_detect_ns=1_000_000,validation_return_ns=1_500_000,
+                        peak_rss_bytes=3*2**20,logical_reads=10,phantom_lookups_completed=completed,
+                        phantom_lookups_skipped=10-completed,index_decode_verify_ns=100_000,index_bytes=123,
+                        cpu_user_ns=3_000_000,cpu_system_ns=1_000_000)
+            samples.append(dict(B=sample,C=sample))
+        row=summarize({("bc","fixture"):samples})[0]
+        self.assertEqual(row["target_wall_ms"],2)
+        self.assertEqual(row["target_detect_ms"],1)
+        self.assertEqual(row["target_peak_rss_mib"],3)
+        self.assertEqual(row["target_index_decode_verify_ms"],0.1)
+        self.assertEqual(row["target_cpu_ms"],4)
+        self.assertEqual(row["target_cleanup_ms"],1)
+        self.assertEqual(row["target_phantom_lookups_completed_min"],0)
+        self.assertEqual(row["target_phantom_lookups_completed_max"],7)
 
 
 if __name__ == "__main__":
