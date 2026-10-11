@@ -305,6 +305,10 @@ where
     txpool_prewarm: Option<txpool_prewarm::Handle<Evm::Primitives, P, Evm>>,
     /// Scratch buffer reused for BAL hash encoding across validated blocks.
     bal_hash_buf: Vec<u8>,
+    /// Explicit per-block experimental observer; absent in ordinary node builds.
+    #[cfg(feature = "bal-research")]
+    research_observer:
+        Option<Arc<dyn crate::tree::payload_processor::bal::research::ResearchObserver>>,
 }
 
 impl<N, P, Evm, V> BasicEngineValidator<P, Evm, V>
@@ -372,7 +376,32 @@ where
             state_root_strategy: Arc::new(DefaultStateRootStrategy::default()),
             txpool_prewarm: None,
             bal_hash_buf: Vec::new(),
+            #[cfg(feature = "bal-research")]
+            research_observer: None,
         }
+    }
+
+    /// Initializes persistent pools and resets per-block research caches outside measurement.
+    #[cfg(feature = "bal-research")]
+    pub fn research_prepare(
+        &mut self,
+        overlay_manager: OverlayManager<N>,
+        observer: Option<Arc<dyn crate::tree::payload_processor::bal::research::ResearchObserver>>,
+    ) {
+        self.overlay_manager = overlay_manager;
+        self.research_observer = observer.clone();
+        self.payload_processor
+            .research_prepare(observer, !self.config.disable_bal_parallel_execution());
+    }
+
+    /// Installs the timed block's explicit observer after its envelope has been decoded.
+    #[cfg(feature = "bal-research")]
+    pub fn research_observer(
+        &mut self,
+        observer: Option<Arc<dyn crate::tree::payload_processor::bal::research::ResearchObserver>>,
+    ) {
+        self.research_observer = observer.clone();
+        self.payload_processor.research_observer(observer);
     }
 
     /// Sets the state-root strategy used by payload validation.
@@ -657,6 +686,12 @@ where
             instrument_state_provider.then(|| StateProviderMetrics::with_source("engine"));
         let state_provider_stats =
             instrument_state_provider.then(|| Arc::new(StateProviderStats::default()));
+        #[cfg(feature = "bal-research")]
+        if let Some(observer) = &self.research_observer
+            && let Some(stats) = &state_provider_stats
+        {
+            observer.execution_stats(stats.clone());
+        }
         let execution_cache = handle.caches().map(|caches| (caches, handle.cache_metrics()));
 
         // This state provider factory is parametrized by:
@@ -1187,7 +1222,29 @@ where
         let execution_start = Instant::now();
         let ctx =
             self.execution_ctx_for(input).map_err(|e| InsertBlockErrorKind::Other(Box::new(e)))?;
-        let (output, senders, built_bal, received_bal_revm) =
+        #[cfg(feature = "bal-research")]
+        let observed_result = self.research_observer.as_ref().map(|observer| {
+            crate::tree::payload_processor::bal::execute::execute_block_observed(
+                &self.runtime,
+                &self.evm_config,
+                &make_db,
+                input_bal.clone(),
+                env.evm_env.clone(),
+                ctx.clone(),
+                env.transaction_count,
+                handle.clone_transaction_receiver(),
+                receipt_tx.clone(),
+                observer,
+            )
+        });
+        #[cfg(not(feature = "bal-research"))]
+        let observed_result: Option<
+            Result<_, crate::tree::payload_processor::bal::BalExecutionError>,
+        > = None;
+        let (output, senders, built_bal, received_bal_revm) = if let Some(result) = observed_result
+        {
+            result?
+        } else {
             crate::tree::payload_processor::bal::execute_block(
                 &self.runtime,
                 &self.evm_config,
@@ -1198,7 +1255,8 @@ where
                 env.transaction_count,
                 handle.clone_transaction_receiver(),
                 receipt_tx,
-            )?;
+            )?
+        };
         let execution_duration = execution_start.elapsed();
 
         self.metrics.record_block_execution(&output, execution_duration);
@@ -1380,6 +1438,10 @@ where
             });
 
         if let Err(err) = validation_result {
+            #[cfg(feature = "bal-research")]
+            if let Some(observer) = &self.research_observer {
+                observer.rejected("post_execution_consensus");
+            }
             // call post-block hook
             self.on_invalid_block(parent_block, block, output, None, ctx.state_mut());
             return Err(err.into())

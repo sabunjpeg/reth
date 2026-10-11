@@ -1,4 +1,6 @@
-//! Local L1 BAL research runner. It does not launch a networked node or validate full payloads.
+//! Local execution and disk-backed engine validation research, without a networked node.
+
+#![recursion_limit = "256"]
 
 use crate::{
     fixture::{Fixture, Workload},
@@ -17,9 +19,12 @@ use std::{
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 
+mod candidate;
 mod fixture;
 mod measurement;
+mod read_index;
 mod replay;
+mod validator;
 
 const UPSTREAM_SHA: &str = "1a4dbbe11264fd52e6e9fbe768aa83f9a6b73607";
 
@@ -32,6 +37,36 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Generate committed disk fixtures and early/middle/post phantom declarations.
+    GenerateDisk {
+        #[arg(long)]
+        fixture: PathBuf,
+        #[arg(long)]
+        output: PathBuf,
+    },
+    /// Internal isolated child: one full validation after same-variant warmups.
+    #[command(hide = true)]
+    DiskSample {
+        #[arg(long)]
+        fixture: PathBuf,
+        #[arg(long, value_enum)]
+        variant: validator::DiskVariant,
+        #[arg(long, default_value_t = 4)]
+        workers: usize,
+        #[arg(long, default_value_t = 5)]
+        warmups: usize,
+    },
+    /// Build complete disk-backed fixtures and reproduce semantic BAL rejection.
+    ValidateDisk {
+        #[arg(long)]
+        fixture: PathBuf,
+        #[arg(long, default_value_t = 4)]
+        workers: usize,
+        #[arg(long, default_value_t = 100)]
+        phantoms: usize,
+        #[arg(long)]
+        output: PathBuf,
+    },
     /// Generate a self-contained deterministic fixture using reference execution.
     Generate {
         #[arg(long, default_value_t = 42)]
@@ -94,6 +129,16 @@ struct PilotConfig {
 
 fn main() -> Result<()> {
     match Cli::parse().command {
+        Commands::GenerateDisk { fixture, output } => {
+            validator::generate_cases(&load_fixture(&fixture)?, &output)?
+        }
+        Commands::DiskSample { fixture, variant, workers, warmups } => {
+            let record = validator::sample(&fixture, variant, workers, warmups)?;
+            println!("{}", serde_json::to_string(&record)?);
+        }
+        Commands::ValidateDisk { fixture, workers, phantoms, output } => {
+            validator::reproduce(&load_fixture(&fixture)?, workers, phantoms, &output)?;
+        }
         Commands::Generate { seed, tx_count, workload, output } => {
             let fixture = Fixture::generate(seed, tx_count, workload)?;
             create_parent(&output)?;

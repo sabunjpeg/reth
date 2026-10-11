@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "binary": "target/release/bal-research-runner",
+  "fixtures": {
+    "oracle": "research/fixtures/oracle-reads-64.json",
+    "transfers": "research/fixtures/transfers-64.json"
+  },
+  "workers": 4,
+  "warmups": 5,
+  "repetitions": 30,
+  "order_seed": 7928,
+  "timeout_seconds": 60
+}

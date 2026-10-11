@@ -121,6 +121,15 @@ pub struct EngineApiTreeState<N: NodePrimitives> {
 }
 
 impl<N: NodePrimitives> EngineApiTreeState<N> {
+    /// Creates an isolated tree for the local research validator, with empty acceptance caches.
+    #[cfg(feature = "bal-research")]
+    pub fn research_empty(
+        canonical_block: BlockNumHash,
+        overlay_manager: OverlayManager<N>,
+    ) -> Self {
+        Self::new(10, 10, 3, canonical_block, EngineApiKind::Ethereum, overlay_manager)
+    }
+
     fn new(
         block_buffer_limit: u32,
         max_invalid_header_cache_length: u32,

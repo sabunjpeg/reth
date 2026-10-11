@@ -111,6 +111,9 @@ where
     /// Dedicated blocking pool for warming the BAL read-set, created lazily on the first BAL block
     /// (see [`Self::bal_prewarm_pool`]). Its threads exit when the processor is dropped.
     bal_prewarm_pool: OnceLock<Arc<bal_prewarm_pool::BalPrewarmPool>>,
+    /// Per-block research observation; not installed by a normal node.
+    #[cfg(feature = "bal-research")]
+    research_observer: Option<Arc<dyn bal::research::ResearchObserver>>,
 }
 
 impl<Evm> PayloadProcessor<Evm>
@@ -140,7 +143,32 @@ where
             disable_bal_parallel_state_root: config.disable_bal_parallel_state_root(),
             disable_bal_batch_io: config.disable_bal_batch_io(),
             bal_prewarm_pool: OnceLock::new(),
+            #[cfg(feature = "bal-research")]
+            research_observer: None,
         }
+    }
+
+    /// Resets application state caches while retaining the client's persistent warming pool.
+    #[cfg(feature = "bal-research")]
+    pub(crate) fn research_prepare(
+        &mut self,
+        observer: Option<Arc<dyn bal::research::ResearchObserver>>,
+        parallel: bool,
+    ) {
+        self.execution_cache = Default::default();
+        self.research_observer = observer;
+        if parallel {
+            let _ = self.bal_prewarm_pool();
+        }
+    }
+
+    /// Installs the timed block's observer after sidecar decoding, without warming or resetting.
+    #[cfg(feature = "bal-research")]
+    pub(crate) fn research_observer(
+        &mut self,
+        observer: Option<Arc<dyn bal::research::ResearchObserver>>,
+    ) {
+        self.research_observer = observer;
     }
 
     /// Returns the dedicated BAL read-set prewarm pool, spawning its blocking worker threads on
@@ -455,6 +483,8 @@ where
             precompile_cache_map: self.precompile_cache_map.clone(),
             disable_bal_parallel_state_root: self.disable_bal_parallel_state_root,
             disable_bal_batch_io: self.disable_bal_batch_io,
+            #[cfg(feature = "bal-research")]
+            research_observer: self.research_observer.clone(),
         };
 
         let (prewarm_task, to_prewarm_task) =

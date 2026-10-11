@@ -50,6 +50,9 @@ use std::sync::Arc;
 
 use crate::tree::payload_processor::receipt_root_task::IndexedReceipt;
 
+#[cfg(feature = "bal-research")]
+use super::research::{builder_accesses, transaction_accesses, ResearchObserver};
+
 /// Executes one block on the BAL path using the runtime's persistent BAL worker pool.
 ///
 /// The ordered commit loop applies Ethereum block-level gas admission. Executors with different
@@ -95,6 +98,8 @@ where
             txs,
             receipt_tx,
             worker_count,
+            #[cfg(feature = "bal-research")]
+            None,
         )
     })
 }
@@ -111,6 +116,7 @@ fn execute_block_inner<'scope, Evm, Tx, Err, DB, MakeDb>(
     txs: Receiver<(usize, Result<Tx, Err>)>,
     receipt_tx: Sender<IndexedReceipt<ReceiptTy<Evm::Primitives>>>,
     worker_count: usize,
+    #[cfg(feature = "bal-research")] observer: Option<&Arc<dyn ResearchObserver>>,
 ) -> Result<
     (BlockExecutionOutput<ReceiptTy<Evm::Primitives>>, Vec<Address>, BlockAccessList, Arc<RevmBal>),
     BalExecutionError,
@@ -167,6 +173,23 @@ where
         let mut canonical_executor = evm_config.create_executor_with_state(evm, ctx.clone());
 
         canonical_executor.apply_pre_execution_changes()?;
+        #[cfg(feature = "bal-research")]
+        if let Some(observer) = observer {
+            let accesses = if observer.collect_accesses() {
+                builder_accesses(
+                    canonical_executor
+                        .evm_mut()
+                        .db_mut()
+                        .bal_state
+                        .bal_builder
+                        .as_ref()
+                        .expect("builder enabled"),
+                )
+            } else {
+                Vec::new()
+            };
+            observer.complete(0, &accesses).map_err(BalExecutionError::Other)?;
+        }
         let mut senders = Vec::with_capacity(transaction_count);
         let mut last_sent_len = 0usize;
         for output in ordered_worker_outputs(&result_rx, transaction_count) {
@@ -196,6 +219,17 @@ where
 
             gas_tracker.validate_tx_limit(output.tx_gas_limit)?;
             gas_tracker.record_result(output.result.result());
+            #[cfg(feature = "bal-research")]
+            if let Some(observer) = observer {
+                let accesses = if observer.collect_accesses() {
+                    transaction_accesses(&output.result.result().state)
+                } else {
+                    Vec::new()
+                };
+                observer
+                    .complete(output.index as u32 + 1, &accesses)
+                    .map_err(BalExecutionError::Other)?;
+            }
             canonical_executor.evm_mut().db_mut().bump_bal_index();
 
             let _ = canonical_executor.commit_transaction(output.result);
@@ -214,6 +248,19 @@ where
 
         canonical_executor.evm_mut().db_mut().bump_bal_index();
         let block_result = canonical_executor.apply_post_execution_changes()?;
+        #[cfg(feature = "bal-research")]
+        if let Some(observer) = observer {
+            let accesses = if observer.collect_accesses() {
+                builder_accesses(
+                    canonical_state.bal_state.bal_builder.as_ref().expect("builder enabled"),
+                )
+            } else {
+                Vec::new()
+            };
+            observer
+                .complete(transaction_count as u32 + 1, &accesses)
+                .map_err(BalExecutionError::Other)?;
+        }
         (block_result, senders)
     };
 
@@ -226,6 +273,51 @@ where
         built_bal,
         input_bal_revm,
     ))
+}
+
+/// Executes the same BAL path with an explicitly installed experimental per-block observer.
+#[cfg(feature = "bal-research")]
+#[expect(clippy::too_many_arguments, clippy::type_complexity)]
+pub fn execute_block_observed<'a, Evm, Tx, Err, DB, MakeDb>(
+    runtime: &Runtime,
+    evm_config: &'a Evm,
+    make_db: &'a MakeDb,
+    input_bal: Arc<DecodedBal>,
+    evm_env: EvmEnvFor<Evm>,
+    ctx: ExecutionCtxFor<'a, Evm>,
+    transaction_count: usize,
+    txs: Receiver<(usize, Result<Tx, Err>)>,
+    receipt_tx: Sender<IndexedReceipt<ReceiptTy<Evm::Primitives>>>,
+    observer: &'a Arc<dyn ResearchObserver>,
+) -> Result<
+    (BlockExecutionOutput<ReceiptTy<Evm::Primitives>>, Vec<Address>, BlockAccessList, Arc<RevmBal>),
+    BalExecutionError,
+>
+where
+    Evm: ConfigureEvm + 'static,
+    Tx: ExecutableTxFor<Evm> + Send + 'a,
+    Err: core::error::Error + Send + Sync + 'static,
+    DB: Database + Send + 'a,
+    MakeDb: Fn(bool) -> Result<DB, BalExecutionError> + Sync + 'a,
+    ReceiptTy<Evm::Primitives>: Clone,
+{
+    let pool = runtime.bal_streaming_pool();
+    let workers = pool.current_num_threads().max(1).min(transaction_count);
+    pool.in_place_scope(|scope| {
+        execute_block_inner(
+            scope,
+            evm_config,
+            make_db,
+            input_bal,
+            evm_env,
+            ctx,
+            transaction_count,
+            txs,
+            receipt_tx,
+            workers,
+            Some(observer),
+        )
+    })
 }
 
 fn convert_alloy_to_revm_bal(alloy_bal: &AlloyBal) -> Result<Arc<RevmBal>, BalExecutionError> {

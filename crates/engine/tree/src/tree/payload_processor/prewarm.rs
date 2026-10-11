@@ -441,9 +441,20 @@ where
                 })
             });
 
+            #[cfg(feature = "bal-research")]
+            pool.research_begin_block(ctx.research_observer.clone());
             pool.begin_block(build, caches, ctx.env.txpool_snapshot.clone());
             let dispatch_start = Instant::now();
             for account in prefetch_bal.as_bal() {
+                #[cfg(feature = "bal-research")]
+                if let Some(observer) = &ctx.research_observer
+                    && observer.cancelled()
+                {
+                    for slot in account.storage_slots() {
+                        observer.prefetch(account.address, slot, false, true);
+                    }
+                    continue;
+                }
                 pool.warm_account(account.address, account.storage_slots().map(Into::into));
             }
             ctx.metrics.bal_slot_iteration_duration.record(dispatch_start.elapsed());
@@ -577,6 +588,9 @@ where
     pub disable_bal_parallel_state_root: bool,
     /// Whether BAL state prefetching during prewarm is disabled.
     pub disable_bal_batch_io: bool,
+    /// Per-block research instrumentation and cancellation, absent in ordinary node builds.
+    #[cfg(feature = "bal-research")]
+    pub research_observer: Option<Arc<dyn super::bal::research::ResearchObserver>>,
 }
 
 /// Per-thread EVM state initialised by [`PrewarmContext::evm_for_ctx`] and stored in
@@ -877,6 +891,8 @@ mod tests {
             precompile_cache_map: PrecompileCacheMap::default(),
             disable_bal_parallel_state_root: false,
             disable_bal_batch_io: false,
+            #[cfg(feature = "bal-research")]
+            research_observer: None,
         };
         let (task, actions_tx) =
             PrewarmCacheTask::new(Runtime::test(), PayloadExecutionCache::default(), ctx);
@@ -920,6 +936,8 @@ mod tests {
             precompile_cache_map: PrecompileCacheMap::default(),
             disable_bal_parallel_state_root: false,
             disable_bal_batch_io: false,
+            #[cfg(feature = "bal-research")]
+            research_observer: None,
         }
     }
 

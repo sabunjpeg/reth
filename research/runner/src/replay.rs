@@ -58,9 +58,10 @@ pub(crate) fn run_serial_with_db(
     }
 }
 
-fn execute_serial<DB>(fixture: &Fixture, parent: DB) -> Result<Output>
+pub(crate) fn execute_serial<DB>(fixture: &Fixture, parent: DB) -> Result<Output>
 where
-    DB: Database<Error = <InMemoryDB as Database>::Error> + Debug,
+    DB: Database + Debug,
+    DB::Error: std::error::Error + Send + Sync + 'static,
 {
     let config = evm_config();
     let block = fixture.sealed_block();

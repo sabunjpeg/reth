@@ -1,8 +1,44 @@
-# Reth BAL A/B execution pilot
+# Reth BAL A/B and B/C local pilots
 
 This branch contains a working local **L1** pilot. A calls the serial executor; B calls the pinned BAL execution helper. Both use actual EVM execution, identical Amsterdam fork rules and freshly restored in-memory parent state. Transfers are a control; `oracle-reads` invokes a shared storage-reading contract.
 
-The execution source under `crates/` is unchanged. The root Cargo workspace and lockfile add only the research runner. This pilot does not invoke the full payload validator, BAL storage prewarming or state-root computation. Its timings must not be presented as complete validator latency or a measurement of the full BAL optimization bundle. The full A/B engine configuration and disk-backed validator path are the next milestone, M2.
+The original L1 producing revision leaves execution source under `crates/` unchanged. Its timings exclude the full payload validator, BAL storage prewarming and state-root computation. The branch now also contains the **L2** disk-backed full-validator pilot below, with default-off research hooks and an experimental C sidecar. Historical L1 records retain their original producing revision.
+
+## Disk-backed A/B and B/C
+
+The L2 runner creates a tiny real local MDBX parent database, calculates complete state/receipt/request/BAL commitments, and passes an Ethereum engine payload through `BasicEngineValidator`, `EthBeaconConsensus` and the stock Ethereum payload converter. No networked node or mainnet synchronization is involved.
+
+- A disables BAL parallel execution, parallel state root and batch I/O on the same Amsterdam fork. Ordinary transaction prewarming still follows stock defaults.
+- B keeps stock guards, prefetch ordering, parallel execution and state-root processing. Shared research counters observe canonical completion and storage requests.
+- C additionally verifies `ReadIndexV1` at canonical completion boundaries and skips pending prefetch after a mismatch. The existing abort guards stop further execution/root work; active EVM/database operations finish.
+- CAttr uses the same first-access check with ordinary prefetch cleanup, separating detection from cancellation for representative cases.
+- BStock disables observers and provider counters in the research build for an instrumentation control. It is not a separately built unmodified client.
+
+The collector reads actual transaction-result storage records consumed by the pinned REVM BAL builder, including reverted accesses. Received hints and reference traces are not passed to the verifier. The experimental envelope binds block, BAL and index hashes; B ignores the sidecar and C validates it. See `spec.md` for encoding, bounds and semantics. The standard BAL format is unchanged.
+
+Build and reproduce a small correctness case:
+
+```sh
+CARGO_BUILD_JOBS=4 cargo test --locked -p bal-research-runner --release
+CARGO_BUILD_JOBS=4 cargo test --locked -p reth-engine-tree --features bal-research --release --lib tree::payload_processor -- --test-threads=1
+CARGO_BUILD_JOBS=4 cargo build --locked -p bal-research-runner --release
+target/release/bal-research-runner validate-disk --fixture research/fixtures/oracle-reads-64.json --workers 4 --phantoms 100 --output research/results/local/reproduction-new
+```
+
+For comparable measurements, commit the source and run from a clean checkout:
+
+```sh
+python3 research/analysis/run_disk.py research/configs/disk-pilot.json research/results/local/disk-pilot-new
+python3 research/analysis/summarize_disk.py research/results/local/disk-pilot-new
+```
+
+The matrix uses 64-transaction transfers and shared-oracle fixtures, four execution workers, five warmups and 30 randomized paired repetitions. It compares valid A/B and B/C, plus phantom B/C with 10% and 50% of the remaining permitted BAL item budget and first-access claims at 1, 32 and 65. High-count early/late cases also include CAttr. One valid fixture compares BStock/B. All guards stay enabled; phantom inputs preserve genuine entries and recompute BAL and dependent block commitments.
+
+Each measurement uses a fresh child process/database. Between warmups/replays, the harness recreates the tree acceptance cache, execution cache and state overlay while retaining initialized thread pools. Database preparation, payload construction and producer tracing are untimed. Sidecar verification, full validation and cleanup barriers are timed. Detection is recorded at the decisive canonical mismatch or stock consensus error; completion follows joined execution/prewarm work and drained root/proof queues. The report also includes the validator's return time, so cleanup cost remains visible.
+
+Storage counters count provider requests and skipped storage operations. `phantom_lookups_skipped` counts slots, while whole batch-job skipping is unsupported and `prewarm_jobs_skipped` is null. Rejected partial gas is unknown and null; `fixture_expected_gas_used` is separate. Sidecar bytes count only C/CAttr consumption. Process peak RSS includes initialization/warmups. Physical I/O and cache hit/miss counters remain unsupported. A tiny disk-backed database is likely page-cached; this does not establish cold-state or production performance.
+
+The supported correctness scope includes ordinary transactions, shared reads, reverted reads, no-op writes, out-of-gas before/after access, untouched EIP-2930 hints, pre/post system activity, false early/late indices, canonical ordering and cancellation followed by valid execution. Broad nested calls, creation/selfdestruct, withdrawal workloads and production deployment remain outside this pilot.
 
 ## Setup
 
@@ -75,4 +111,4 @@ Timeouts, nonzero child exits, panics and output mismatches produce explicit fai
 
 The Mac and its background workload, thermal/power behavior and affinity are uncontrolled. In-memory database cloning can dominate tiny fixtures and differs from a real Reth provider. Peak RSS includes warmups. These are development pilot measurements, not paper-ready validator claims.
 
-M2 requires a disk-backed parent snapshot, correctly committed complete payload, the full payload-validator path, fresh acceptance caches, explicit prewarm/state-root settings, and joined block-attributed background work. Only that path can compare the full A/B bundle and reproduce semantic phantom-read rejection in stock B. First-access metadata, cancellation and C remain later milestones.
+Use the L2 path for full local validation and phantom-rejection comparisons. Extend its small correctness scope and evaluate larger/held-out workloads, storage conditions and machines before making paper-level generalizations. The local 30-pair campaign remains a development pilot, not a final sample-size plan.

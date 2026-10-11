@@ -6,11 +6,14 @@ Branch: `research/bal-first-access`, starting at `1a4dbbe11264fd52e6e9fbe768aa83
 
 ## Current scope
 
-The authorized local A/B execution pilot is implemented and measured. C, cancellation, phantom mutations and full disk-backed payload validation are not implemented. The L1 adapters do not invoke the entire A/B optimization bundle. All outputs and reports label this restriction.
+The original L1 A/B execution pilot is implemented and measured. The requested extension now implements local disk-backed complete-payload A/B, semantic phantom reproduction in B, and experimental first-access/cancellation variants CAttr/C. The L1 and L2 paths are reported separately. This is a restricted development pilot, not production consensus software or a final paper campaign.
 
-- M0 A/B source/build audit: pinned commit verified, Rust 1.95 verified, baseline BAL tests passed, execution and surrounding validator mapped. Upstream dependency entries are unchanged; only the runner entry was added to Cargo.lock. Source under `crates/` and `testing/` remains unchanged. The full M0 first-access collector feasibility gate remains open for the later C work.
+- M0: pinned commit/Rust 1.95 verified, baseline BAL tests passed and full validator mapped. Existing upstream dependency entries are unchanged. The L2 extension adds default-off `bal-research` engine hooks; the original L1 producing revision remains unmodified. The collector uses independent actual transaction-result/pre/post access records without a REVM patch, with tests for the declared ordinary-transaction boundary scope.
 - M1: deterministic transfer and shared-oracle fixtures, real serial/BAL execution, direct equivalence checks, timers/counters, isolated sample processes, bounded child cleanup, JSONL/manifests and analysis complete. The final campaign contains 720 A/B records (360 pairs); its counter-disabled control contains 60 records (30 pairs). Both completed with zero failures from clean research revision `d19763ef1f5aaac9a6dffce6d3fd684370821420`.
-- M2 onward: pending. L2 needs complete valid payloads and local disk-backed state before validator-performance or physical-I/O claims.
+- M2: real local MDBX parent state and complete state/receipt/request/BAL commitments generated. Valid A/B/C payloads are accepted with matching serial-reference outputs. Correctly committed phantom reads pass structural/item-bound checks and stock B rejects their reconstructed BAL mismatch after execution.
+- M3/M4: bounded canonical ReadIndexV1 codec and canonical-prefix verifier integrated, including wrong-index, coverage/order/range/size and actual access-boundary tests. False sidecars on valid standard blocks are rejected only by the candidate, while B accepts.
+- M5: per-block prefetch cancellation and stock execution/root abort guards used; active reads finish and pending reads skip. Deterministic active/queued/next-block tests and consecutive complete-payload checks pass. Existing stock item/gas guards are retained; a stronger periodic feasibility bound is deferred because its sound system-activity accounting has not been established.
+- M6: the 30-pair local disk campaign is ready to run from the frozen clean revision. Reference outputs will identify their producing source and retain failed/timeout records.
 
 ## Validation
 
@@ -57,4 +60,17 @@ The final source matches warmup instrumentation to the measured mode and initial
 
 ## Next action
 
-Start M2's full-validator/disk integration described in README and CODEX_HANDOFF. Establish valid complete-payload acceptance under A and B before testing correctly committed phantom reads. The current pilot is ready for local reproduction and extension.
+Freeze the tested L2 source, run `research/configs/disk-pilot.json`, audit all records and save its raw inputs/results. After this pilot, broaden boundary correctness and held-out workloads and define controlled storage/cache conditions before a final paper campaign.
+
+## L2 extension validation
+
+```sh
+CARGO_BUILD_JOBS=4 cargo test --locked -p bal-research-runner --release
+CARGO_BUILD_JOBS=4 cargo test --locked -p reth-engine-tree --features bal-research --release --lib tree::payload_processor -- --test-threads=1
+CARGO_BUILD_JOBS=4 cargo test --locked -p reth-engine-tree --release --lib tree::payload_processor::bal::execute::tests -- --test-threads=1
+python3 -m unittest discover -s research/analysis -p 'test_*.py'
+```
+
+Runner: **13 passed**, including C validation for reverted/no-op/OOG accesses, valid standard blocks with false early/late sidecars, stock hash/decode/item-limit guards, canonical-prefix rules, and rejection followed by valid execution. Engine with research hooks: **55 passed**, including the original executor suite, out-of-order/disconnected-worker handling and a deterministic active-read/queued-skip/next-block prefetch test. Feature-disabled executor suite: **19 passed**. Analysis: **7 passed**, including manifest/fixture integrity, complete pair checks, failure accounting and serializable timeout records. Package formatting, dependency/TOML checks and Clippy pass; existing upstream configuration dead-code warning remains documented above. The locked release binary is rebuilt before measurement.
+
+One access test initially used the obsolete 21,000 transaction intrinsic cost. The pinned Amsterdam call actually uses 15,000 gas before bytecode; the test now uses 15,003 and explicitly verifies failure before the storage read. Bad block hashes are checked concurrently with execution, so their control does not assume zero speculative canonical work. These corrected tests preserve the stock semantics rather than changing B.
