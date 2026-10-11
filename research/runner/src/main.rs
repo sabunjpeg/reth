@@ -143,7 +143,8 @@ fn sample(
         Variant::B => replay::run_bal_with_db(&fixture, parent, &runtime, counters),
     };
     for _ in 0..warmups {
-        fixture.assert_output(&execute(fixture.db()?, None)?)?;
+        let warmup_counters = collect_counters.then(|| Arc::new(Counters::default()));
+        fixture.assert_output(&execute(fixture.db()?, warmup_counters)?)?;
     }
     let counters = collect_counters.then(|| Arc::new(Counters::default()));
     let parent = fixture.db()?;
