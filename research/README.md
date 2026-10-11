@@ -59,7 +59,7 @@ The runner writes `manifest.json`, `runs.jsonl` and `completion.json`. The analy
 
 ## Measurement definitions
 
-- Wall time: per-block execution setup through return of the serial or joined BAL helper. Parent-state reconstruction, file loading, process startup, reference generation, runtime initialization, warmups and output comparisons are outside the timer. Per-worker database clones, signer recovery, EVM setup, BAL conversion where used, pre/post hooks and BAL reconstruction are inside it.
+- Wall time: per-block execution setup through return of the serial or joined BAL helper. Parent-state reconstruction, file loading, process startup, reference generation, runtime/chain-configuration initialization, warmups and output comparisons are outside the timer. The fixed fork configuration is initialized once per process during warmup, as it is in a client. Per-worker database clones, signer recovery, EVM setup, BAL conversion where used, pre/post hooks and BAL reconstruction are inside it.
 - CPU: deltas of `RUSAGE_SELF` user/system time over the timed replay, covering all process threads. CPU core-ms is their sum divided by 1,000,000.
 - Logical reads: calls to `CountedDb.basic`, `storage`, `code_by_hash` and `block_hash`. They include repeated worker requests. They are neither SLOAD instruction counts nor disk reads. Counter-enabled runs share the same relaxed atomic instrumentation on both adapters.
 - Peak memory: per-child `getrusage` process-lifetime high-water mark through measurement, including fixture loading, runtime construction and same-variant warmups. It is not a delta or isolated execution peak. macOS reports bytes; Linux reports KiB, converted to bytes.

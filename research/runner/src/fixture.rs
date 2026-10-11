@@ -21,7 +21,7 @@ use reth_revm::db::InMemoryDB;
 use revm::state::{AccountInfo, Bytecode};
 use secp256k1::{Keypair, Secp256k1, SecretKey};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 /// The shared-read contract: PUSH1 0; SLOAD; POP; STOP.
 pub(crate) const ORACLE_CODE: &[u8] = &[0x60, 0x00, 0x54, 0x50, 0x00];
@@ -237,7 +237,14 @@ impl Fixture {
 }
 
 pub(crate) fn evm_config() -> EthEvmConfig {
-    EthEvmConfig::new(Arc::new(ChainSpecBuilder::mainnet().amsterdam_activated().build()))
+    // A real client creates its chain configuration once. Initialize it during untimed
+    // warmups rather than rebuilding mainnet's genesis configuration in every sample.
+    static CONFIG: OnceLock<EthEvmConfig> = OnceLock::new();
+    CONFIG
+        .get_or_init(|| {
+            EthEvmConfig::new(Arc::new(ChainSpecBuilder::mainnet().amsterdam_activated().build()))
+        })
+        .clone()
 }
 
 const fn contract(address: Address, code: Bytes) -> Account {

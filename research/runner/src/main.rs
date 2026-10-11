@@ -439,7 +439,7 @@ fn manifest(config: &PilotConfig, binary: &Path, run_id: &str) -> Result<Value> 
         "ram_bytes": if cfg!(target_os = "macos") { command_text("sysctl", &["-n", "hw.memsize"]).ok() } else { None },
         "fixtures": fixtures, "fork": "ChainSpecBuilder::mainnet().amsterdam_activated()",
         "stock_execution_code_unchanged": true, "sample_process_isolation": true,
-        "timer": "per-block execution setup through joined execution helper; excludes parent snapshot construction, reference generation, file loading, process startup, runtime construction, warmups and output comparison; includes BAL worker database clones",
+        "timer": "per-block execution setup through joined execution helper; excludes parent snapshot construction, reference generation, file loading, process startup, runtime and chain-configuration initialization, warmups and output comparison; includes BAL worker database clones",
         "cpu": "RUSAGE_SELF user/system deltas across timed execution, all threads",
         "peak_rss": "RUSAGE_SELF process-lifetime high-water mark through measurement; includes setup and same-variant warmups; bytes on macOS, KiB converted to bytes on Linux",
         "logical_reads": "CountedDb account/code/storage/block-hash calls; not EVM opcode counts or physical I/O",
