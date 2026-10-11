@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "fixtures": [
+    "research/fixtures/transfers-16.json",
+    "research/fixtures/oracle-reads-16.json",
+    "research/fixtures/transfers-64.json",
+    "research/fixtures/oracle-reads-64.json"
+  ],
+  "workers": [1, 2, 4],
+  "warmups": 5,
+  "repetitions": 30,
+  "order_seed": 20261012,
+  "collect_counters": true,
+  "timeout_seconds": 30
+}

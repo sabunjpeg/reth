@@ -1642,6 +1642,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "bal-research-runner"
+version = "2.7.0"
+dependencies = [
+ "alloy-consensus",
+ "alloy-eip7928",
+ "alloy-eips",
+ "alloy-evm",
+ "alloy-primitives",
+ "alloy-rlp",
+ "clap",
+ "crossbeam-channel",
+ "eyre",
+ "libc",
+ "reth-chainspec",
+ "reth-engine-tree",
+ "reth-ethereum-primitives",
+ "reth-evm",
+ "reth-evm-ethereum",
+ "reth-fs-util",
+ "reth-primitives-traits",
+ "reth-provider",
+ "reth-revm",
+ "reth-tasks",
+ "revm",
+ "secp256k1 0.30.0",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "base-x"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"

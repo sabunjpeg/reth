@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "fixtures": ["research/fixtures/oracle-reads-64.json"],
+  "workers": [4],
+  "warmups": 5,
+  "repetitions": 30,
+  "order_seed": 20261012,
+  "collect_counters": false,
+  "timeout_seconds": 30
+}
