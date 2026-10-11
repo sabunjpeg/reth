@@ -1,0 +1,261 @@
+{
+  "schema_version": 1,
+  "measurement_level": "L2",
+  "run_id": "1791748744569034000-42714",
+  "config": {
+    "schema_version": 1,
+    "binary": "target/release/bal-research-runner",
+    "fixtures": {
+      "oracle": "research/fixtures/oracle-reads-64.json",
+      "transfers": "research/fixtures/transfers-64.json"
+    },
+    "workers": 4,
+    "warmups": 5,
+    "repetitions": 30,
+    "order_seed": 7928,
+    "timeout_seconds": 60
+  },
+  "upstream_sha": "1a4dbbe11264fd52e6e9fbe768aa83f9a6b73607",
+  "research_sha": "bd77b1d2f9709f55c3d488de61987167ddd230c0",
+  "binary_sha256": "e5ee61bdf137b29b257fcc69eb7148f4f5741b5d023b291ef458164acb93f9ee",
+  "lockfile_sha256": "4b3bb7238009a4c58f61a7861fc328b180d7dbc69082d25b6bc829c9e7454118",
+  "engine_patch_sha256": "4609c61feac5183818568c7cd4d5218489f82f843898a216b519e3a63533391a",
+  "host_id": "Hugos-MacBook-Pro.local",
+  "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+  "rustc": "rustc 1.95.0 (59807616e 2026-04-14)",
+  "hardware": "Apple M4 Pro",
+  "ram_bytes": 25769803776,
+  "cpu_cores": 14,
+  "cargo": "cargo 1.95.0 (f2d3ce0bd 2026-03-21)",
+  "build_profile": "release; enforced by the measured child",
+  "rustflags": "",
+  "git_status": "",
+  "storage": "fresh synthetic Reth TestDB per child in /var/folders/c2/0d8xvdb534939z2cb0sxxsh40000gn/T",
+  "environment": "local Mac pilot; CPU affinity, thermals, power and background load uncontrolled",
+  "workers": {
+    "BAL_execution": 4,
+    "BAL_prefetch": 128,
+    "A_transaction_prewarm": 1,
+    "cpu_pool": 1,
+    "storage_pool": 1,
+    "proof_account_pool": 1,
+    "proof_storage_pool": 1,
+    "overlay_pool": 1
+  },
+  "unsupported_counters": {
+    "physical_read_bytes": "no physical I/O accounting",
+    "cache_hits": "not separately instrumented",
+    "cache_misses": "not separately instrumented",
+    "prewarm_jobs_skipped": "per-slot skipping measured; partially skipped batches are not counted as whole jobs",
+    "rejected_gas_used": "partial/failing execution gas is unavailable; fixture_expected_gas_used is supplied separately"
+  },
+  "logical_reads": "execution-provider account/storage/code requests only; prewarm requests separately counted; proof requests excluded",
+  "phantom_work": "declared phantom storage requests started, returned or skipped before dispatch/between operations; not disk bytes",
+  "peak_rss": "per-child process-lifetime high-water mark including setup and warmups; platform getrusage units converted to bytes",
+  "fixtures": [
+    {
+      "path": "fixtures/oracle/valid.json",
+      "sha256": "b5e8d5d10da21beb8bd197fcb2863e479087a5f58886b12e2d07fb7f23323e63"
+    },
+    {
+      "path": "fixtures/oracle/valid.json",
+      "sha256": "b5e8d5d10da21beb8bd197fcb2863e479087a5f58886b12e2d07fb7f23323e63"
+    },
+    {
+      "path": "fixtures/oracle/valid.json",
+      "sha256": "b5e8d5d10da21beb8bd197fcb2863e479087a5f58886b12e2d07fb7f23323e63"
+    },
+    {
+      "path": "fixtures/oracle/phantom-10-claim-1.json",
+      "sha256": "6b58b82c5df6c4652c4b8fb6bd96f57f665c7f4ecd47afdd7d77cf8917de61da"
+    },
+    {
+      "path": "fixtures/oracle/phantom-10-claim-32.json",
+      "sha256": "dde850170b6e95f05ee1d58be7d235d8b6cb60dc1aaf0fc1806e15beb01d21f5"
+    },
+    {
+      "path": "fixtures/oracle/phantom-10-claim-65.json",
+      "sha256": "6edb8c763a919ccdfeb21a6aa918d2fef47d14d6274f5e5a047803290c59bbdd"
+    },
+    {
+      "path": "fixtures/oracle/phantom-50-claim-1.json",
+      "sha256": "949938354707f5481205e1455f1aa9a2c86b6afb479e205d1150a3952f9a3c82"
+    },
+    {
+      "path": "fixtures/oracle/phantom-50-claim-32.json",
+      "sha256": "b4c666aea4fb0bad693ce6fe4b2bda4a69739484383d2df17b994d28f6fce4a2"
+    },
+    {
+      "path": "fixtures/oracle/phantom-50-claim-65.json",
+      "sha256": "41fcce8f1cc95abaf305cf067213a19d0af3af7dbb00c2a8a66f6a6d5c6746d0"
+    },
+    {
+      "path": "fixtures/transfers/valid.json",
+      "sha256": "7153d512d16dbbfb46ca77189b97b64d42efe429e060ad7edce649a740b1de4d"
+    },
+    {
+      "path": "fixtures/transfers/valid.json",
+      "sha256": "7153d512d16dbbfb46ca77189b97b64d42efe429e060ad7edce649a740b1de4d"
+    }
+  ],
+  "cases": [
+    {
+      "comparison": "ab",
+      "path": "fixtures/oracle/valid.json",
+      "variants": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/valid.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "comparison": "instrumentation",
+      "path": "fixtures/oracle/valid.json",
+      "variants": [
+        "b-stock",
+        "b"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-10-claim-1.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-10-claim-32.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-10-claim-65.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-50-claim-1.json",
+      "variants": [
+        "b",
+        "c",
+        "c-attr"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-50-claim-32.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/oracle/phantom-50-claim-65.json",
+      "variants": [
+        "b",
+        "c",
+        "c-attr"
+      ]
+    },
+    {
+      "comparison": "ab",
+      "path": "fixtures/transfers/valid.json",
+      "variants": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "comparison": "bc",
+      "path": "fixtures/transfers/valid.json",
+      "variants": [
+        "b",
+        "c"
+      ]
+    }
+  ],
+  "generation": [
+    {
+      "workload": "oracle",
+      "cases": [
+        {
+          "claim": null,
+          "file": "valid.json",
+          "phantom_count": 0
+        },
+        {
+          "claim": 1,
+          "file": "phantom-10-claim-1.json",
+          "fraction_remaining_item_budget": 0.1,
+          "phantom_count": 1492
+        },
+        {
+          "claim": 32,
+          "file": "phantom-10-claim-32.json",
+          "fraction_remaining_item_budget": 0.1,
+          "phantom_count": 1492
+        },
+        {
+          "claim": 65,
+          "file": "phantom-10-claim-65.json",
+          "fraction_remaining_item_budget": 0.1,
+          "phantom_count": 1492
+        },
+        {
+          "claim": 1,
+          "file": "phantom-50-claim-1.json",
+          "fraction_remaining_item_budget": 0.5,
+          "phantom_count": 7460
+        },
+        {
+          "claim": 32,
+          "file": "phantom-50-claim-32.json",
+          "fraction_remaining_item_budget": 0.5,
+          "phantom_count": 7460
+        },
+        {
+          "claim": 65,
+          "file": "phantom-50-claim-65.json",
+          "fraction_remaining_item_budget": 0.5,
+          "phantom_count": 7460
+        }
+      ],
+      "producer_encode_ns": 3708,
+      "producer_scope": "independent full serial execution to collect trace, plus index encoding; outside validation timer",
+      "producer_trace_ns": 1180791
+    },
+    {
+      "workload": "transfers",
+      "cases": [
+        {
+          "claim": null,
+          "file": "valid.json",
+          "phantom_count": 0
+        }
+      ],
+      "producer_encode_ns": 4500,
+      "producer_scope": "independent full serial execution to collect trace, plus index encoding; outside validation timer",
+      "producer_trace_ns": 1156000
+    }
+  ],
+  "timer": "experimental sidecar verification plus full Ethereum engine payload validation and FIFO named-task/pool drain; excludes database/genesis initialization, payload construction, cache reset, warmups, output oracle and process startup",
+  "baseline": "pinned stock guards and scheduling; default-off feature adds optional observations. BStock bypasses observers and execution counters in the research build, rather than being a separate unmodified binary. B/C share counters and all stock guards",
+  "candidate": "canonical first-storage-read verification; aborts stock execution/root via existing guards; additionally stops subsequent account dispatch and skips pending BAL prefetch between reads; active DB operations finish",
+  "scope": "local synthetic tiny parent database, OS cache uncontrolled, no network, no cold-state or physical I/O claims"
+}

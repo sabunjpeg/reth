@@ -1,0 +1,48 @@
+{
+  "cases": [
+    {
+      "claim": null,
+      "file": "valid.json",
+      "phantom_count": 0
+    },
+    {
+      "claim": 1,
+      "file": "phantom-10-claim-1.json",
+      "fraction_remaining_item_budget": 0.1,
+      "phantom_count": 1492
+    },
+    {
+      "claim": 32,
+      "file": "phantom-10-claim-32.json",
+      "fraction_remaining_item_budget": 0.1,
+      "phantom_count": 1492
+    },
+    {
+      "claim": 65,
+      "file": "phantom-10-claim-65.json",
+      "fraction_remaining_item_budget": 0.1,
+      "phantom_count": 1492
+    },
+    {
+      "claim": 1,
+      "file": "phantom-50-claim-1.json",
+      "fraction_remaining_item_budget": 0.5,
+      "phantom_count": 7460
+    },
+    {
+      "claim": 32,
+      "file": "phantom-50-claim-32.json",
+      "fraction_remaining_item_budget": 0.5,
+      "phantom_count": 7460
+    },
+    {
+      "claim": 65,
+      "file": "phantom-50-claim-65.json",
+      "fraction_remaining_item_budget": 0.5,
+      "phantom_count": 7460
+    }
+  ],
+  "producer_encode_ns": 3708,
+  "producer_scope": "independent full serial execution to collect trace, plus index encoding; outside validation timer",
+  "producer_trace_ns": 1180791
+}

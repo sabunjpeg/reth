@@ -1,0 +1,12 @@
+{
+  "cases": [
+    {
+      "claim": null,
+      "file": "valid.json",
+      "phantom_count": 0
+    }
+  ],
+  "producer_encode_ns": 4500,
+  "producer_scope": "independent full serial execution to collect trace, plus index encoding; outside validation timer",
+  "producer_trace_ns": 1156000
+}

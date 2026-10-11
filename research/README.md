@@ -40,6 +40,15 @@ Storage counters count provider requests and skipped storage operations. `phanto
 
 The supported correctness scope includes ordinary transactions, shared reads, reverted reads, no-op writes, out-of-gas before/after access, untouched EIP-2930 hints, pre/post system activity, false early/late indices, canonical ordering and cancellation followed by valid execution. Broad nested calls, creation/selfdestruct, withdrawal workloads and production deployment remain outside this pilot.
 
+The completed local campaign has 720 measurements and zero failures. Valid blocks do not show an A/B or B/C speedup. B completes all phantom prefetch requests before cleanup settles; C reduces high-count completion time through cancellation, while CAttr remains slower than B. Earlier canonical rejection is not an earlier elapsed-time verdict in that case. Read the [measured interpretation](results/reference/disk-pilot/interpretation.md), [full tables](results/reference/disk-pilot/summary.md) and [machine-readable summary](results/reference/disk-pilot/summary.csv). The separate [L1 rerun](results/reference/l1-rerun/summary.md) also retains 720 measurements.
+
+Audit and regenerate the saved summaries without running the benchmark again:
+
+```sh
+python3 research/analysis/summarize_disk.py research/results/reference/disk-pilot
+python3 research/analysis/summarize.py research/results/reference/l1-rerun
+```
+
 ## Setup
 
 Starting revision: `1a4dbbe11264fd52e6e9fbe768aa83f9a6b73607`. Branch: `research/bal-first-access`.
