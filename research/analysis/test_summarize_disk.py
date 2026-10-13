@@ -6,12 +6,42 @@ from pathlib import Path
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from run_disk import failed_record
+from run_disk import failed_record, host_information
 from summarize_disk import load, summarize
 
 
 class DiskLedgerTests(unittest.TestCase):
+    def test_linux_host_resources_use_procfs_and_record_affinity(self):
+        with patch("run_disk.platform.system", return_value="Linux"), \
+             patch("run_disk.Path.read_text", side_effect=[
+                 "processor : 0\nmodel name : Example CPU\n",
+                 "MemTotal: 16384 kB\nMemAvailable: 8192 kB\n"]), \
+             patch("run_disk.os.sched_getaffinity", return_value={3, 1}, create=True), \
+             patch("run_disk.command") as command:
+            info = host_information()
+        self.assertEqual(info["hardware"], "Example CPU")
+        self.assertEqual(info["ram_bytes"], 16384 * 1024)
+        self.assertEqual(info["cpu_affinity"], [1, 3])
+        command.assert_not_called()
+
+    def test_macos_host_resources_keep_native_sysctl_values(self):
+        with patch("run_disk.platform.system", return_value="Darwin"), \
+             patch("run_disk.command", side_effect=["Apple M4 Pro", "25769803776"]):
+            info = host_information()
+        self.assertEqual(info["hardware"], "Apple M4 Pro")
+        self.assertEqual(info["ram_bytes"], 25769803776)
+
+    def test_unavailable_linux_memory_is_null(self):
+        with patch("run_disk.platform.system", return_value="Linux"), \
+             patch("run_disk.Path.read_text", side_effect=["", "MemAvailable: 8192 kB\n"]), \
+             patch("run_disk.platform.processor", return_value=""), \
+             patch("run_disk.platform.machine", return_value="aarch64"):
+            info = host_information()
+        self.assertEqual(info["hardware"], "aarch64")
+        self.assertIsNone(info["ram_bytes"])
+
     def campaign(self, directory):
         fixture = Path(directory) / "fixture.json"
         fixture.write_text("{}")

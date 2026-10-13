@@ -1,0 +1,80 @@
+name: BAL cloud pilot
+
+on:
+  push:
+    branches: [research/cloud-bal-pilot]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    if: github.repository == 'sabunjpeg/reth'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CLOUD_OUTPUT: research/results/local/cloud-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out frozen source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Record cloud host
+        run: |
+          mkdir -p "$CLOUD_OUTPUT/checks"
+          lscpu --json > "$CLOUD_OUTPUT/host-cpu.json"
+          free --bytes > "$CLOUD_OUTPUT/host-memory.txt"
+          df --block-size=1 . > "$CLOUD_OUTPUT/host-disk.txt"
+          cat /proc/stat > "$CLOUD_OUTPUT/host-stat-before.txt"
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev pkg-config build-essential cmake clang
+
+      - name: Select Rust 1.95.0
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup override set 1.95.0
+          rustc --version
+          cargo --version
+
+      - name: Check measurement and analysis code
+        run: python3 -m unittest discover -s research/analysis -p 'test_*.py' -v 2>&1 | tee "$CLOUD_OUTPUT/checks/python-tests.log"
+
+      - name: Check candidate correctness
+        run: cargo test --locked -p bal-research-runner --release 2>&1 | tee "$CLOUD_OUTPUT/checks/runner-tests.log"
+
+      - name: Check engine integration and cancellation
+        run: cargo test --locked -p reth-engine-tree --features bal-research --release --lib tree::payload_processor -- --test-threads=1 2>&1 | tee "$CLOUD_OUTPUT/checks/engine-tests.log"
+
+      - name: Build release runner
+        run: cargo build --locked -p bal-research-runner --release 2>&1 | tee "$CLOUD_OUTPUT/checks/build.log"
+
+      - name: Run the 720-measurement A/B/C pilot
+        run: python3 research/analysis/run_disk.py research/configs/disk-pilot.json "$CLOUD_OUTPUT/campaign" 2>&1 | tee "$CLOUD_OUTPUT/campaign.log"
+
+      - name: Audit and summarize results
+        run: |
+          python3 research/analysis/summarize_disk.py "$CLOUD_OUTPUT/campaign"
+          cat "$CLOUD_OUTPUT/campaign/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Record final host accounting
+        if: always()
+        run: |
+          mkdir -p "$CLOUD_OUTPUT"
+          cat /proc/stat > "$CLOUD_OUTPUT/host-stat-after.txt"
+          git rev-parse HEAD > "$CLOUD_OUTPUT/source-sha.txt"
+
+      - name: Retain results and correctness logs
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: bal-cloud-pilot-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.CLOUD_OUTPUT }}
+          retention-days: 7
+          if-no-files-found: error

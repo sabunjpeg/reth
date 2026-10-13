@@ -18,6 +18,29 @@ def sha(path):
 def command(*args):
     return subprocess.check_output(args, text=True).strip()
 
+def host_information():
+    """Record native host resources without assuming macOS or inventing missing counters."""
+    system = platform.system()
+    hardware = None
+    ram_bytes = None
+    if system == "Darwin":
+        hardware = command("sysctl", "-n", "machdep.cpu.brand_string")
+        ram_bytes = int(command("sysctl", "-n", "hw.memsize"))
+    elif system == "Linux":
+        cpuinfo = Path("/proc/cpuinfo").read_text()
+        hardware = next((line.split(":", 1)[1].strip() for line in cpuinfo.splitlines()
+                         if line.startswith("model name") and ":" in line), None)
+        if hardware is None:
+            hardware = platform.processor() or platform.machine() or None
+        meminfo = Path("/proc/meminfo").read_text()
+        memory = next((line.split() for line in meminfo.splitlines()
+                       if line.startswith("MemTotal:")), None)
+        if memory is not None and len(memory) == 3 and memory[2] == "kB":
+            ram_bytes = int(memory[1]) * 1024
+    affinity = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None
+    return {"hardware":hardware, "ram_bytes":ram_bytes, "cpu_affinity":affinity,
+            "environment":f"{system} pilot; CPU affinity recorded when available; host sharing, thermals, power and background load uncontrolled"}
+
 def failed_record(fixture, variant, error):
     """Preserve a full nullable measurement schema, including TimeoutExpired's byte stderr."""
     names = {"a": "A", "b": "B", "c": "C", "c-attr": "CAttr", "b-stock": "BStock"}
@@ -82,11 +105,10 @@ def run(config_path, output):
         "binary_sha256":sha(binary), "lockfile_sha256":sha("Cargo.lock"),
         "engine_patch_sha256":hashlib.sha256(command("git","diff",PIN,"--","crates").encode()).hexdigest(),
         "host_id":platform.node(), "os":platform.platform(), "rustc":command("rustc","--version"),
-        "hardware":command("sysctl","-n","machdep.cpu.brand_string"), "ram_bytes":int(command("sysctl","-n","hw.memsize")),
+        **host_information(),
         "cpu_cores":os.cpu_count(), "cargo":command("cargo","--version"),
         "build_profile":"release; enforced by the measured child", "rustflags":os.environ.get("RUSTFLAGS", ""),
         "git_status":"", "storage":"fresh synthetic Reth TestDB per child in " + tempfile.gettempdir(),
-        "environment":"local Mac pilot; CPU affinity, thermals, power and background load uncontrolled",
         "workers":{"BAL_execution":config["workers"], "BAL_prefetch":128, "A_transaction_prewarm":1,
                    "cpu_pool":1, "storage_pool":1, "proof_account_pool":1, "proof_storage_pool":1, "overlay_pool":1},
         "unsupported_counters":{"physical_read_bytes":"no physical I/O accounting", "cache_hits":"not separately instrumented",

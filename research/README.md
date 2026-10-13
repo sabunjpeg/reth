@@ -49,6 +49,14 @@ python3 research/analysis/summarize_disk.py research/results/reference/disk-pilo
 python3 research/analysis/summarize.py research/results/reference/l1-rerun
 ```
 
+## Cloud pilot
+
+The `BAL cloud pilot` workflow runs this same disk-backed configuration on a GitHub-hosted Ubuntu 24.04 VM. Pushes to `research/cloud-bal-pilot` start the job. It selects Rust 1.95.0, runs the Python, candidate and engine-integration tests, builds the release runner, then collects and audits the 720-measurement campaign. Two compilation jobs limit build memory; the experiment still uses four execution workers and the stock BAL prefetch pool.
+
+The artifact contains the campaign manifest, generated fixtures, raw records, completion receipt, summaries, correctness logs and host resource snapshots. Artifacts are retained for seven days; download them to preserve the evidence. The manifest records native Linux CPU/RAM and available CPU affinity, alongside the source, binary, lockfile and fixture hashes. No credentials are needed by the benchmark.
+
+This remains a tiny synthetic-state pilot with uncontrolled OS cache and underlying host sharing. Compare A/B/C within the cloud campaign; the earlier Mac results have a different host and should not be pooled into its timing statistics. A completed Actions job alone is insufficient: audit the downloaded campaign with `summarize_disk.py` and check the correctness logs.
+
 ## Setup
 
 Starting revision: `1a4dbbe11264fd52e6e9fbe768aa83f9a6b73607`. Branch: `research/bal-first-access`.
